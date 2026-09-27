@@ -1,0 +1,49 @@
+name: AI Data Processing Agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      file_url:
+        description: "Direct link to download input data"
+        required: true
+        type: string
+      task_prompt:
+        description: "Instructions for the AI"
+        required: true
+        type: string
+
+jobs:
+  run-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: pip install google-antigravity
+        
+      - name: Prepare workspace and download file
+        run: |
+          mkdir -p output_workspace
+          wget -q -O downloaded_input_file "${{ inputs.file_url }}"
+          
+      - name: Execute Agent Script
+        env:
+          GEMINI_API_KEY: ${{ secrets.MY_API_KEY }}
+        run: |
+          python agent_runner.py --file downloaded_input_file --prompt "${{ inputs.task_prompt }}"
+          
+      - name: Zip Output Workspace
+        run: zip -r output_workspace.zip output_workspace/
+        
+      - name: Upload Workspace Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-processed-output
+          path: output_workspace.zip
+          
